@@ -5,6 +5,8 @@ if [ -n "${MAINTENANCE_PAGE_URL}" ]; then
   curl -s "${MAINTENANCE_PAGE_URL}" > /usr/html/50x.html
 fi
 
+cd /html && erb acme-pending.html.erb > acme-pending.html
+
 # Unless overridden, use a default configuration that enables PFS for most
 # browsers and provides SSLv3 while mitigating POODLE by avoiding CBC-mode
 # ciphers. Reference: http://serverfault.com/a/637849

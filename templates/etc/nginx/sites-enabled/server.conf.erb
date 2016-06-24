@@ -6,6 +6,12 @@ upstream containers {
 }
 <% end %>
 
+<% if ENV['ACME_SERVER'] %>
+upstream acme {
+  server <%= ENV['ACME_SERVER'] %>;
+}
+<% end %>
+
 server {
   <% if ENV['PROXY_PROTOCOL'] == 'true' %>
   listen 80 proxy_protocol;
@@ -24,7 +30,18 @@ server {
   location /50x.html {
   }
 
+  <% if ENV['ACME_SERVER'] %>
+  location /.well-known/acme-challenge {
+    proxy_pass http://acme;
+  }
+  <% end %>
+
   location / {
+    <% if ENV['ACME_PENDING'] %>
+    rewrite ^ /acme-pending.html break;
+    root /html;
+    <% else %>
+
     <% if ENV['FORCE_SSL'] == 'true' %>
     return 301 https://$host$request_uri;
     <% end %>
@@ -44,6 +61,7 @@ server {
     proxy_set_header Connection "upgrade";
     <% end %>
     break;
+    <% end %>
   }
 }
 
@@ -74,6 +92,11 @@ server {
   <% end %>
 
   location / {
+    <% if ENV['ACME_PENDING'] %>
+    rewrite ^ /acme-pending.html break;
+    root /html;
+    <% else %>
+
     proxy_set_header X-Forwarded-Proto https;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header Host $http_host;
@@ -89,5 +112,6 @@ server {
     proxy_set_header Connection "upgrade";
     <% end %>
     break;
+    <% end %>
   }
 }
