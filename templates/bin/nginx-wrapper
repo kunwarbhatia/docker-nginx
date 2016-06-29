@@ -35,4 +35,4 @@ if [ ! -f /etc/nginx/ssl/server.crt ]; then
   chmod og-rwx server.key
 fi
 
-/usr/sbin/nginx $@
+/usr/sbin/nginx "$@"
