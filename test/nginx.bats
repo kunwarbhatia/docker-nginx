@@ -360,3 +360,25 @@ NGINX_VERSION=1.9.2
   [[ "$output" =~ 'some.domain.com' ]]
   [[ "$output" =~ 'finish setting up' ]]
 }
+
+@test "When ACME is enabled, it redirects to SSL, but does not set HSTS headers" {
+  ACME_DOMAIN="some.domain.com" wait_for_nginx
+
+  run curl -I localhost 2>/dev/null
+  [[ "$output" =~ "HTTP/1.1 301 Moved Permanently" ]]
+  [[ "$output" =~ "Location: https://localhost" ]]
+
+  run curl -Ik https://localhost 2>/dev/null
+  [[ ! "$output" =~ "Strict-Transport-Security:" ]]
+}
+
+@test "When ACME is enabled with FORCE_SSL, it redirects to SSL and sets HSTS headers" {
+  ACME_DOMAIN="some.domain.com" FORCE_SSL="true" wait_for_nginx
+
+  run curl -I localhost 2>/dev/null
+  [[ "$output" =~ "HTTP/1.1 301 Moved Permanently" ]]
+  [[ "$output" =~ "Location: https://localhost" ]]
+
+  run curl -Ik https://localhost 2>/dev/null
+  [[ "$output" =~ "Strict-Transport-Security:" ]]
+}
