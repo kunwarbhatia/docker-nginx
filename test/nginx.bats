@@ -258,6 +258,26 @@ teardown() {
   [[ "$output" =~ "X-Request-Start: t=" ]]
 }
 
+@test "It forces X-Forwarded-Proto = http for HTTP requests" {
+  LOG="nc.log"
+  UPSTREAM_OUT="$LOG" simulate_upstream
+  UPSTREAM_SERVERS=localhost:4000 wait_for_nginx
+  curl -s -H 'X-Forwarded-Proto: https' http://localhost
+
+  grep 'X-Forwarded-Proto: http' "$LOG"
+  run grep 'X-Forwarded-Proto: https' "$LOG"
+  [[ "$status" -eq 1 ]]
+}
+
+@test "It forces X-Forwarded-Proto = https for HTTPS requests" {
+  LOG="nc.log"
+  UPSTREAM_OUT="$LOG" simulate_upstream
+  UPSTREAM_SERVERS=localhost:4000 wait_for_nginx
+  curl -sk -H 'X-Forwarded-Proto: http' https://localhost
+
+  grep 'X-Forwarded-Proto: https' "$LOG"
+}
+
 @test "It supports GZIP compression of responses" {
   simulate_upstream
   UPSTREAM_SERVERS=localhost:4000 wait_for_nginx
