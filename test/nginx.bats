@@ -46,9 +46,18 @@ teardown() {
   cp "$TMPDIR"/* /usr/html
 }
 
-@test "It should install NGiNX 1.9.2" {
+NGINX_VERSION=1.9.2
+
+@test "It should install NGiNX $NGINX_VERSION" {
   run /usr/sbin/nginx -v
-  [[ "$output" =~ "1.9.2"  ]]
+  [[ "$output" =~ "$NGINX_VERSION"  ]]
+}
+
+@test "It does not include the Nginx version" {
+  wait_for_nginx
+  run curl -v http://localhost
+  echo "$output"
+  [[ ! "$output" =~ "$NGINX_VERSION" ]]
 }
 
 @test "It should pass an external Heartbleed test" {
