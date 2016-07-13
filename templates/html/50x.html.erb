@@ -1,0 +1,73 @@
+<% require 'base64' %>
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Application Error</title>
+
+    <link rel="shortcut icon"type="image/x-icon" href="data:image/x-icon;,">
+
+    <style type="text/css">
+      body {
+        font-family: "proxima-nova", arial, "open-sans", sans-serif;
+        margin: 0px;
+      }
+
+      .error-page {
+        height: 100vh;
+        width: 100vw;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .error-page .error-body {
+        max-width: 100%;
+        text-align: center;
+        border-radius: 5px;
+        padding: 50px;
+      }
+
+      .error-body .error-logo {
+        height: 140px;
+        width: 140px;
+        background-size: 140px;
+        margin: 0 auto 0 auto;
+        background-image: url("data:image/png;base64,<%= Base64.strict_encode64(File.open("./error-logo.png", "rb").read) %>");
+      }
+
+      .error-body h1 {
+        color: #4a4a4a;
+        font-size: 28px;
+        margin-top: 50px;
+      }
+
+      .error-body p {
+        color: #999;
+        font-size: 14px;
+        margin-top: 25px;
+      }
+    </style>
+
+  </head>
+
+  <body>
+    <div >
+      <div class="error-page">
+        <div class="error-body">
+          <div class="error-logo"></div>
+
+          <h1>This application crashed</h1>
+
+          <p>
+          If you are a visitor, please try again shortly.
+          </p>
+
+          <p>
+          If you are the owner of this application, check your logs for
+          errors, or restart your app.
+          </p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -11,8 +11,13 @@ RUN /tmp/install-nginx
 # at https://weakdh.org/sysadmin.html.
 RUN openssl dhparam -out /etc/nginx/dhparams.pem 2048
 
+ADD templates/html /usr/html/
 ADD templates/etc /etc
 ADD templates/bin /usr/local/bin
+
+# Generate default 50x.html
+RUN cd /usr/html \
+ && erb 50x.html.erb > 50x.html
 
 ADD test /tmp/test
 RUN apk-install haproxy openssl-dev \

@@ -292,3 +292,11 @@ NGINX_VERSION=1.9.2
   UPSTREAM_SERVERS=localhost:4000 wait_for_nginx
   curl -H "Accept-Encoding: gzip" localhost | gunzip -c | grep "Hello World!"
 }
+
+@test "It includes an informative default error page" {
+  UPSTREAM_SERVERS=localhost:4000 wait_for_nginx
+  run curl http://localhost
+  [[ "$output" =~ "application crashed" ]]
+  [[ "$output" =~ "you are a visitor" ]]
+  [[ "$output" =~ "you are the owner" ]]
+}
