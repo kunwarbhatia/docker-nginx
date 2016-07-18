@@ -287,6 +287,36 @@ NGINX_VERSION=1.9.2
   grep 'X-Forwarded-Proto: https' "$LOG"
 }
 
+@test "It drops the Proxy header (HTTP)" {
+  LOG="nc.log"
+  UPSTREAM_OUT="$LOG" simulate_upstream
+  UPSTREAM_SERVERS=localhost:4000 wait_for_nginx
+  curl -s -H 'Proxy: some' http://localhost
+
+  run grep -i 'Proxy:' "$LOG"
+  [[ "$status" -eq 1 ]]
+}
+
+@test "It drops the Proxy header (HTTP, lowercase)" {
+  LOG="nc.log"
+  UPSTREAM_OUT="$LOG" simulate_upstream
+  UPSTREAM_SERVERS=localhost:4000 wait_for_nginx
+  curl -s -H 'proxy: some' http://localhost
+
+  run grep -i 'Proxy:' "$LOG"
+  [[ "$status" -eq 1 ]]
+}
+
+@test "It drops the Proxy header (HTTPS)" {
+  LOG="nc.log"
+  UPSTREAM_OUT="$LOG" simulate_upstream
+  UPSTREAM_SERVERS=localhost:4000 wait_for_nginx
+  curl -sk -H 'Proxy: some' https://localhost
+
+  run grep -i 'Proxy:' "$LOG"
+  [[ "$status" -eq 1 ]]
+}
+
 @test "It supports GZIP compression of responses" {
   simulate_upstream
   UPSTREAM_SERVERS=localhost:4000 wait_for_nginx
