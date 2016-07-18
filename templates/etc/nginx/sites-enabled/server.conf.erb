@@ -37,12 +37,12 @@ server {
   <% end %>
 
   location / {
-    <% if ENV['ACME_PENDING'] %>
+    <% if ENV['ACME_PENDING'] == 'true' %>
     rewrite ^ /acme-pending.html break;
     root /html;
     <% else %>
 
-    <% if (ENV['FORCE_SSL'] == 'true') || (ENV['ACME_DOMAIN'] && !ENV['ACME_PENDING']) %>
+    <% if (ENV['FORCE_SSL'] == 'true') || (ENV['ACME_READY'] == 'true') %>
     return 301 https://$host$request_uri;
     <% end %>
 

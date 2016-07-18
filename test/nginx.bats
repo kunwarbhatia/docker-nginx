@@ -352,7 +352,7 @@ NGINX_VERSION=1.9.2
 }
 
 @test "It serves a static information page if ACME_PENDING is set" {
-  ACME_PENDING=true ACME_DOMAIN="some.domain.com" wait_for_nginx
+  ACME_PENDING="true" ACME_DOMAIN="some.domain.com" wait_for_nginx
   run curl "http://localhost/.well-known/acme-challenge/123"
   [[ "$output" =~ 'some.domain.com' ]]
   [[ "$output" =~ 'finish setting up' ]]
@@ -361,8 +361,8 @@ NGINX_VERSION=1.9.2
   [[ "$output" =~ 'finish setting up' ]]
 }
 
-@test "When ACME is enabled, it redirects to SSL, but does not set HSTS headers" {
-  ACME_DOMAIN="some.domain.com" wait_for_nginx
+@test "When ACME is ready, it redirects to SSL, but does not set HSTS headers" {
+  ACME_READY="true" wait_for_nginx
 
   run curl -I localhost 2>/dev/null
   [[ "$output" =~ "HTTP/1.1 301 Moved Permanently" ]]
@@ -373,7 +373,7 @@ NGINX_VERSION=1.9.2
 }
 
 @test "When ACME is enabled with FORCE_SSL, it redirects to SSL and sets HSTS headers" {
-  ACME_DOMAIN="some.domain.com" FORCE_SSL="true" wait_for_nginx
+  ACME_READY="true" FORCE_SSL="true" wait_for_nginx
 
   run curl -I localhost 2>/dev/null
   [[ "$output" =~ "HTTP/1.1 301 Moved Permanently" ]]
