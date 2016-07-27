@@ -42,7 +42,7 @@ server {
     root /html;
     <% else %>
 
-    <% if (ENV['FORCE_SSL'] == 'true') || (ENV['ACME_READY'] == 'true') %>
+    <% if ENV['FORCE_SSL'] == 'true' %>
     return 301 https://$host$request_uri;
     <% end %>
 

@@ -361,12 +361,12 @@ NGINX_VERSION=1.9.2
   [[ "$output" =~ 'finish setting up' ]]
 }
 
-@test "When ACME is ready, it redirects to SSL, but does not set HSTS headers" {
+@test "When ACME is ready, it doesn't redirect to SSL without FORCE_SSL" {
   ACME_READY="true" wait_for_nginx
 
-  run curl -I localhost 2>/dev/null
-  [[ "$output" =~ "HTTP/1.1 301 Moved Permanently" ]]
-  [[ "$output" =~ "Location: https://localhost" ]]
+  run curl -sI localhost 2>/dev/null
+  [[ "$output" =~ "HTTP/1.1 200 OK" ]]
+  [[ ! "$output" =~ "HTTP/1.1 301 Moved Permanently" ]]
 
   run curl -Ik https://localhost 2>/dev/null
   [[ ! "$output" =~ "Strict-Transport-Security:" ]]
