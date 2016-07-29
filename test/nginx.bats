@@ -330,3 +330,55 @@ NGINX_VERSION=1.9.2
   [[ "$output" =~ "you are a visitor" ]]
   [[ "$output" =~ "you are the owner" ]]
 }
+
+@test "It redirects ACME requests if ACME_SERVER is set" {
+  UPSTREAM_PORT=5000 UPSTREAM_RESPONSE="acme.txt" simulate_upstream
+  simulate_upstream
+  ACME_SERVER=localhost:5000 UPSTREAM_SERVERS=localhost:4000 wait_for_nginx
+  run curl "http://localhost/.well-known/acme-challenge/123"
+  [[ "$output" =~ 'ACME Response' ]]
+  run curl "http://localhost/"
+  [[ "$output" =~ 'Hello World!' ]]
+}
+
+@test "It does not redirect ACME requests if ACME_SERVER is unset" {
+  UPSTREAM_PORT=5000 UPSTREAM_RESPONSE="acme.txt" simulate_upstream
+  simulate_upstream
+  UPSTREAM_SERVERS=localhost:4000 wait_for_nginx
+  run curl "http://localhost/.well-known/acme-challenge/123"
+  [[ "$output" =~ 'Hello World!' ]]
+  run curl "http://localhost/"
+  [[ "$output" =~ 'Hello World!' ]]
+}
+
+@test "It serves a static information page if ACME_PENDING is set" {
+  ACME_PENDING="true" ACME_DOMAIN="some.domain.com" wait_for_nginx
+  run curl "http://localhost/.well-known/acme-challenge/123"
+  [[ "$output" =~ 'some.domain.com' ]]
+  [[ "$output" =~ 'finish setting up' ]]
+  run curl "http://localhost/"
+  [[ "$output" =~ 'some.domain.com' ]]
+  [[ "$output" =~ 'finish setting up' ]]
+}
+
+@test "When ACME is ready, it doesn't redirect to SSL without FORCE_SSL" {
+  ACME_READY="true" wait_for_nginx
+
+  run curl -sI localhost 2>/dev/null
+  [[ "$output" =~ "HTTP/1.1 200 OK" ]]
+  [[ ! "$output" =~ "HTTP/1.1 301 Moved Permanently" ]]
+
+  run curl -Ik https://localhost 2>/dev/null
+  [[ ! "$output" =~ "Strict-Transport-Security:" ]]
+}
+
+@test "When ACME is enabled with FORCE_SSL, it redirects to SSL and sets HSTS headers" {
+  ACME_READY="true" FORCE_SSL="true" wait_for_nginx
+
+  run curl -I localhost 2>/dev/null
+  [[ "$output" =~ "HTTP/1.1 301 Moved Permanently" ]]
+  [[ "$output" =~ "Location: https://localhost" ]]
+
+  run curl -Ik https://localhost 2>/dev/null
+  [[ "$output" =~ "Strict-Transport-Security:" ]]
+}

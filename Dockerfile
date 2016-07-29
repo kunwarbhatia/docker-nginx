@@ -19,6 +19,9 @@ ADD templates/bin /usr/local/bin
 RUN cd /usr/html \
  && erb 50x.html.erb > 50x.html
 
+RUN mkdir /html
+ADD templates/html/acme-pending.html.erb /html/
+
 ADD test /tmp/test
 RUN apk-install haproxy openssl-dev \
 	&& bats /tmp/test \
