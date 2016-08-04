@@ -81,6 +81,11 @@ server {
   ssl_certificate /etc/nginx/ssl/server.crt;
   ssl_certificate_key /etc/nginx/ssl/server.key;
 
+  <% if ENV['ACME_READY'] == 'true' %>
+  ssl_stapling on;
+  resolver 8.8.8.8 8.8.4.4;
+  <% end %>
+
   keepalive_timeout 5;
 
   error_page 502 503 504 /50x.html;
