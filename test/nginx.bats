@@ -46,7 +46,7 @@ teardown() {
   cp "$TMPDIR"/* /usr/html
 }
 
-NGINX_VERSION=1.9.2
+NGINX_VERSION=1.10.1
 
 @test "It should install NGiNX $NGINX_VERSION" {
   run /usr/sbin/nginx -v
