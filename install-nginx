@@ -1,13 +1,19 @@
 #!/bin/sh
-
-set -e
+set -o nounset
+set -o errexit
+set -o pipefail
 
 mkdir /nginx && cd /nginx
 
-NGINX_VERSION=1.9.2
-wget http://nginx.org/download/nginx-$NGINX_VERSION.tar.gz
-tar zxf nginx-$NGINX_VERSION.tar.gz
-cd nginx-$NGINX_VERSION
+NGINX_VERSION='1.10.1'
+NGINX_SHASUM='9c5d4e06d309bbe2efa41f09dd53912e3c3d3a75'
+
+NGINX_ARCHIVE="nginx-$NGINX_VERSION.tar.gz"
+
+wget "http://nginx.org/download/${NGINX_ARCHIVE}"
+echo "${NGINX_SHASUM}  ${NGINX_ARCHIVE}" | sha1sum -c -
+tar zxf "$NGINX_ARCHIVE"
+cd "nginx-$NGINX_VERSION"
 
 # Cribbing from
 # http://git.alpinelinux.org/cgit/aports/tree/main/nginx/APKBUILD

@@ -46,7 +46,7 @@ teardown() {
   cp "$TMPDIR"/* /usr/html
 }
 
-NGINX_VERSION=1.9.2
+NGINX_VERSION=1.10.1
 
 @test "It should install NGiNX $NGINX_VERSION" {
   run /usr/sbin/nginx -v
@@ -381,4 +381,9 @@ NGINX_VERSION=1.9.2
 
   run curl -Ik https://localhost 2>/dev/null
   [[ "$output" =~ "Strict-Transport-Security:" ]]
+}
+
+@test "When ACME_READY is set, it enables OCSP stapling" {
+  ACME_READY="true" FORCE_SSL="true" wait_for_nginx
+  openssl s_client -connect acme-123.jesuispasdaccord.fr:443 -tlsextdebug  -status </dev/null | grep 'OCSP Response Status'
 }
