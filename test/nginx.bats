@@ -11,16 +11,27 @@ uninstall_heartbleed() {
   rm -rf ${GOPATH}
 }
 
+wait_for() {
+  for i in $(seq 0 50); do
+    if "$@" > /dev/null 2>&1; then
+      return 0
+    fi
+    sleep 0.1
+  done
+
+  return 1
+}
+
 wait_for_nginx() {
-  /usr/local/bin/nginx-wrapper > /tmp/nginx.log &
-  while ! pgrep -x "nginx: worker process" > /dev/null ; do sleep 0.1; done
+  /usr/local/bin/nginx-wrapper > /tmp/nginx.log 2>&1 &
+  wait_for pgrep -x "nginx: worker process"
 }
 
 wait_for_proxy_protocol() {
   # This is really weird, but it appears NGiNX takes several seconds to
   # correctly handle Proxy Protocol requests
   haproxy -f ${BATS_TEST_DIRNAME}/haproxy.cfg
-  while ! curl localhost:8080 &> /dev/null ; do sleep 0.1 ; done
+  wait_for curl localhost:8080
 }
 
 local_s_client() {
@@ -37,11 +48,12 @@ setup() {
 }
 
 teardown() {
-  pkill nginx-wrapper || true
-  pkill nginx || true
-  pkill -f upstream-server || true
-  pkill nc || true
-  pkill haproxy || true
+  cat /tmp/nginx.log
+  pkill -KILL nginx-wrapper || true
+  pkill -KILL nginx || true
+  pkill -KILL -f upstream-server || true
+  pkill -KILL nc || true
+  pkill -KILL haproxy || true
   rm -rf /etc/nginx/ssl/*
   cp "$TMPDIR"/* /usr/html
 }
@@ -381,4 +393,107 @@ NGINX_VERSION=1.10.1
 
   run curl -Ik https://localhost 2>/dev/null
   [[ "$output" =~ "Strict-Transport-Security:" ]]
+}
+
+@test "Nginx proxies plain HTTP requests on port 9000" {
+  LOG="nc.log"
+  UPSTREAM_OUT="$LOG" simulate_upstream
+  PROXY_PROTOCOL=true UPSTREAM_SERVERS=localhost:4000 wait_for_nginx
+
+  curl -fs http://localhost:9000/
+  wait_for grep -i 'get' "$LOG"
+}
+
+@test "Nginx rewrites the request path to /healthcheck on port 9000" {
+  LOG="nc.log"
+  UPSTREAM_OUT="$LOG" simulate_upstream
+  PROXY_PROTOCOL=true UPSTREAM_SERVERS=localhost:4000 wait_for_nginx
+
+  curl -fs http://localhost:9000/foo
+  wait_for grep 'GET /healthcheck' "$LOG"
+
+  run grep -i 'foo' "$LOG"
+  [[ "$status" -eq 1 ]]
+}
+
+@test "Nginx discards headers on port 9000" {
+  LOG="nc.log"
+  UPSTREAM_OUT="$LOG" simulate_upstream
+  PROXY_PROTOCOL=true UPSTREAM_SERVERS=localhost:4000 wait_for_nginx
+
+  curl -fs -H 'Authorization: foo' http://localhost:9000/
+  wait_for grep -i 'get' "$LOG"
+
+  run grep -i 'foo' "$LOG"
+  [[ "$status" -eq 1 ]]
+}
+
+@test "Nginx rewrites the User-Agent header to Aptible Health Check on port 9000" {
+  LOG="nc.log"
+  UPSTREAM_OUT="$LOG" simulate_upstream
+  PROXY_PROTOCOL=true UPSTREAM_SERVERS=localhost:4000 wait_for_nginx
+
+  curl -fs http://localhost:9000/
+  wait_for grep -i 'get' "$LOG"
+
+  grep 'Aptible Health Check' "$LOG"
+}
+
+@test "Nginx discards the request body on port 9000" {
+  LOG="nc.log"
+  UPSTREAM_OUT="$LOG" simulate_upstream
+  PROXY_PROTOCOL=true UPSTREAM_SERVERS=localhost:4000 wait_for_nginx
+
+  curl -fs --data "foo=bar" http://localhost:9000/
+  wait_for grep -i 'get' "$LOG"
+
+  run grep -i 'foo' "$LOG"
+  [[ "$status" -eq 1 ]]
+}
+
+@test "Nginx discards the request method on port 9000" {
+  LOG="nc.log"
+  UPSTREAM_OUT="$LOG" simulate_upstream
+  PROXY_PROTOCOL=true UPSTREAM_SERVERS=localhost:4000 wait_for_nginx
+
+  curl -fs -I http://localhost:9000/
+  wait_for grep -i 'get' "$LOG"
+
+  run grep -i 'head' "$LOG"
+  [[ "$status" -eq 1 ]]
+}
+
+@test "Nginx returns a 50 on port 90002 if the upstream is not responding" {
+  PROXY_PROTOCOL=true UPSTREAM_SERVERS=localhost:4000 wait_for_nginx
+
+  run curl -sw "%{http_code}" http://localhost:9000/
+  [[ "$output" -eq 502 ]]
+}
+
+@test "Nginx returns a 200 on port 9000 if the upstream is returning a 200" {
+  UPSTREAM_RESPONSE="upstream-response.txt" simulate_upstream
+  PROXY_PROTOCOL=true UPSTREAM_SERVERS=localhost:4000 wait_for_nginx
+
+  run curl -sw "%{http_code}" http://localhost:9000/
+  [[ "$output" -eq 200 ]]
+}
+
+@test "Nginx returns a 200 on port 9000 if the upstream is returning a 500" {
+  UPSTREAM_RESPONSE="upstream-response-500.txt" simulate_upstream
+  PROXY_PROTOCOL=true UPSTREAM_SERVERS=localhost:4000 wait_for_nginx
+
+  run curl -sw "%{http_code}" http://localhost:9000/
+  [[ "$output" -eq 200 ]]
+}
+
+@test "Nginx discards the response body on port 9000" {
+  simulate_upstream
+  PROXY_PROTOCOL=true UPSTREAM_SERVERS=localhost:4000 wait_for_nginx
+  wait_for_proxy_protocol
+
+  run curl http://localhost:8080/
+  [[ "$output" =~ "Hello World!" ]]
+
+  run curl http://localhost:9000/
+  [[ ! "$output" =~ "Hello World!" ]]
 }

@@ -120,3 +120,41 @@ server {
     <% end %>
   }
 }
+
+<% if ENV['UPSTREAM_SERVERS'] %>
+server {
+  listen 9000;
+
+  access_log /proc/self/fd/1 proxy_log;
+
+  location = / {
+    default_type 'text/plain';
+
+    content_by_lua_block {
+      local r = ngx.location.capture("/healthcheck");
+      if r.status == 502 then
+        ngx.status = 502;
+      else
+        ngx.status = 200;
+      end
+    }
+  }
+
+  location = /healthcheck {
+    internal;
+
+    proxy_method GET;
+    proxy_pass_request_headers off;
+    proxy_pass_request_body off;
+    proxy_set_header User-Agent "Aptible Health Check";
+
+    proxy_pass http://containers;
+  }
+
+  location / {
+    # Send all requests to /
+    rewrite ^.*$ / last;
+  }
+
+}
+<% end %>

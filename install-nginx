@@ -7,20 +7,51 @@ mkdir /nginx && cd /nginx
 
 NGINX_VERSION='1.10.1'
 NGINX_SHASUM='9c5d4e06d309bbe2efa41f09dd53912e3c3d3a75'
+NGINX_RESOURCE="nginx-${NGINX_VERSION}"
+NGINX_ARCHIVE="${NGINX_RESOURCE}.tar.gz"
 
-NGINX_ARCHIVE="nginx-$NGINX_VERSION.tar.gz"
+NGX_DEVEL_KIT_VERSION="0.3.0"
+NGX_DEVEL_KIT_SHASUM="b556d068db23037be30436af559795f45dd93c67"
+NGX_DEVEL_KIT_RESOURCE="ngx_devel_kit-${NGX_DEVEL_KIT_VERSION}"
+NGX_DEVEL_KIT_ARCHIVE="${NGX_DEVEL_KIT_RESOURCE}.tar.gz"
 
-wget "http://nginx.org/download/${NGINX_ARCHIVE}"
+NGX_LUA_VERSION="0.10.6"
+NGX_LUA_SHASUM="8f32f89abe60944f96655bb7646a30748ac41463"
+NGX_LUA_RESOURCE="lua-nginx-module-${NGX_LUA_VERSION}"
+NGX_LUA_ARCHIVE="${NGX_LUA_RESOURCE}.tar.gz"
+
+BUILD_DIR="$(mktemp -d)"
+
+cd "$BUILD_DIR"
+
+curl -fsSL "http://nginx.org/download/${NGINX_ARCHIVE}" -o "$NGINX_ARCHIVE"
 echo "${NGINX_SHASUM}  ${NGINX_ARCHIVE}" | sha1sum -c -
 tar zxf "$NGINX_ARCHIVE"
-cd "nginx-$NGINX_VERSION"
+
+curl -fsSL "https://github.com/simpl/ngx_devel_kit/archive/v${NGX_DEVEL_KIT_VERSION}.tar.gz" -o "$NGX_DEVEL_KIT_ARCHIVE"
+echo "${NGX_DEVEL_KIT_SHASUM}  ${NGX_DEVEL_KIT_ARCHIVE}" | sha1sum -c -
+tar zxf "$NGX_DEVEL_KIT_ARCHIVE"
+
+curl -fsSL "https://github.com/openresty/lua-nginx-module/archive/v${NGX_LUA_VERSION}.tar.gz" -o "$NGX_LUA_ARCHIVE"
+echo "${NGX_LUA_SHASUM}  ${NGX_LUA_ARCHIVE}" | sha1sum -c -
+tar zxf "$NGX_LUA_ARCHIVE"
+
+echo "Downloaded:"
+ls -l
+
+cd "$NGINX_RESOURCE"
 
 # Cribbing from
 # http://git.alpinelinux.org/cgit/aports/tree/main/nginx/APKBUILD
 # but adding --with-http_realip_module to support "set_real_ip_from" directive
 # and removing some options which we may not need.
-apk-install build-base pcre-dev openssl-dev zlib-dev
+apk-install build-base pcre pcre-dev openssl openssl-dev zlib zlib-dev luajit luajit-dev
+
+export LUAJIT_LIB=/usr/lib
+export LUAJIT_INC=/usr/include/luajit-2.0
+
 mkdir -p /tmp/nginx
+
 ./configure \
   --prefix=/usr \
   --conf-path=/etc/nginx/nginx.conf \
@@ -36,11 +67,17 @@ mkdir -p /tmp/nginx
   --with-pcre-jit \
   --with-http_ssl_module \
   --with-http_gzip_static_module \
-  --with-http_realip_module
-make && make install
-apk del build-base openssl-dev pcre-dev zlib-dev && apk-install pcre
-cd / && rm -rf nginx
+  --with-http_realip_module \
+  --add-module="../${NGX_DEVEL_KIT_RESOURCE}" \
+  --add-module="../${NGX_LUA_RESOURCE}"
+
+make
+make install
+apk del build-base openssl-dev pcre-dev zlib-dev
 
 # Create the user and group under which the nginx process will run.
 addgroup -S nginx 2>/dev/null || true
 adduser -G nginx -H -s /sbin/nologin -D nginx 2>/dev/null || true
+
+# Finally, clean everything up
+rm -rf "$BUILD_DIR"
