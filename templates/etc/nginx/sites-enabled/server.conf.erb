@@ -130,6 +130,9 @@ server {
   location = / {
     default_type 'text/plain';
 
+    <% if ENV['FORCE_HEALTHCHECK_SUCCESS'] == 'true' %>
+    return 200 "";
+    <% else %>
     content_by_lua_block {
       local r = ngx.location.capture("/healthcheck");
       if r.status == 502 then
@@ -138,6 +141,7 @@ server {
         ngx.status = 200;
       end
     }
+    <% end %>
   }
 
   location = /healthcheck {

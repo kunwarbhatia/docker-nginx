@@ -45,10 +45,13 @@ simulate_upstream() {
 setup() {
   TMPDIR=$(mktemp -d)
   cp /usr/html/* "$TMPDIR"
+  ps auxwww
 }
 
 teardown() {
+  echo "---- Begin Nginx logs ----"
   cat /tmp/nginx.log
+  echo "---- End Nginx logs ----"
   pkill -KILL nginx-wrapper || true
   pkill -KILL nginx || true
   pkill -KILL -f upstream-server || true
@@ -463,7 +466,7 @@ NGINX_VERSION=1.10.1
   [[ "$status" -eq 1 ]]
 }
 
-@test "Nginx returns a 50 on port 90002 if the upstream is not responding" {
+@test "Nginx returns a 502 on port 9000 if the upstream is not responding" {
   PROXY_PROTOCOL=true UPSTREAM_SERVERS=localhost:4000 wait_for_nginx
 
   run curl -sw "%{http_code}" http://localhost:9000/
@@ -481,6 +484,14 @@ NGINX_VERSION=1.10.1
 @test "Nginx returns a 200 on port 9000 if the upstream is returning a 500" {
   UPSTREAM_RESPONSE="upstream-response-500.txt" simulate_upstream
   PROXY_PROTOCOL=true UPSTREAM_SERVERS=localhost:4000 wait_for_nginx
+
+  run curl -sw "%{http_code}" http://localhost:9000/
+  [[ "$output" -eq 200 ]]
+}
+
+@test "Nginx returns a 200 on port 9000 if FORCE_HEALTHCHECK_SUCCESS = true" {
+  FORCE_HEALTHCHECK_SUCCESS=true PROXY_PROTOCOL=true UPSTREAM_SERVERS=localhost:4000 \
+    wait_for_nginx
 
   run curl -sw "%{http_code}" http://localhost:9000/
   [[ "$output" -eq 200 ]]
