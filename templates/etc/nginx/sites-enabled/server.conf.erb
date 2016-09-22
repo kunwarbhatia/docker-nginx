@@ -36,6 +36,8 @@ server {
   }
   <% end %>
 
+  include /etc/nginx/partial/health.conf;
+
   location / {
     <% if ENV['ACME_PENDING'] == 'true' %>
     rewrite ^ /acme-pending.html break;
@@ -95,6 +97,8 @@ server {
   <% if ENV['FORCE_SSL'] == 'true' %>
   add_header Strict-Transport-Security max-age=<%= ENV['HSTS_MAX_AGE'] || 31536000 %>;
   <% end %>
+
+  include /etc/nginx/partial/health.conf;
 
   location / {
     <% if ENV['ACME_PENDING'] %>

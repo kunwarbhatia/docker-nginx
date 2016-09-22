@@ -25,8 +25,9 @@ fi
 [ -n "$SSL_PROTOCOLS_OVERRIDE" ] && SSL_PROTOCOLS="${SSL_PROTOCOLS_OVERRIDE//;}"
 export SSL_CIPHERS SSL_PROTOCOLS
 
-# Process ERB variables in nginx.conf and server.conf
+# Process ERB variables in Nginx configuration templates
 cd /etc/nginx && erb nginx.conf.erb > nginx.conf
+cd /etc/nginx/partial && erb health.conf.erb > health.conf
 cd /etc/nginx/sites-enabled && erb server.conf.erb > server.conf
 
 if [ ! -f /etc/nginx/ssl/server.crt ]; then
