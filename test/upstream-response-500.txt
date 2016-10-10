@@ -1,0 +1,5 @@
+HTTP/1.1 500 INTERNAL SERVER ERROR
+Content-Type: application/json
+Content-Length: 30
+
+{ "message": "Oops, World!" }

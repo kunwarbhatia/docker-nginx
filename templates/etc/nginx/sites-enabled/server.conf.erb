@@ -36,6 +36,8 @@ server {
   }
   <% end %>
 
+  include /etc/nginx/partial/health.conf;
+
   location / {
     <% if ENV['ACME_PENDING'] == 'true' %>
     rewrite ^ /acme-pending.html break;
@@ -96,6 +98,8 @@ server {
   add_header Strict-Transport-Security max-age=<%= ENV['HSTS_MAX_AGE'] || 31536000 %>;
   <% end %>
 
+  include /etc/nginx/partial/health.conf;
+
   location / {
     <% if ENV['ACME_PENDING'] %>
     rewrite ^ /acme-pending.html break;
@@ -120,3 +124,45 @@ server {
     <% end %>
   }
 }
+
+<% if ENV['UPSTREAM_SERVERS'] %>
+server {
+  listen 9000;
+
+  access_log /proc/self/fd/1 proxy_log;
+
+  location = / {
+    default_type 'text/plain';
+
+    <% if ENV['FORCE_HEALTHCHECK_SUCCESS'] == 'true' %>
+    return 200 "";
+    <% else %>
+    content_by_lua_block {
+      local r = ngx.location.capture("/healthcheck");
+      if r.status == 502 then
+        ngx.status = 502;
+      else
+        ngx.status = 200;
+      end
+    }
+    <% end %>
+  }
+
+  location = /healthcheck {
+    internal;
+
+    proxy_method GET;
+    proxy_pass_request_headers off;
+    proxy_pass_request_body off;
+    proxy_set_header User-Agent "Aptible Health Check";
+
+    proxy_pass http://containers;
+  }
+
+  location / {
+    # Send all requests to /
+    rewrite ^.*$ / last;
+  }
+
+}
+<% end %>
