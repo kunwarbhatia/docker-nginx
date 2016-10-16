@@ -26,7 +26,7 @@ http {
   default_type application/octet-stream;
 
   # Mirror default "combined" log format, but with Proxy Protocol address
-  log_format proxy_log '$proxy_protocol_addr - $remote_user [$time_local] '
+  log_format proxy_log '$proxy_protocol_addr $host $remote_user [$time_local] '
                        '"$request" $status $body_bytes_sent '
                        '"$http_referer" "$http_user_agent"';
 
